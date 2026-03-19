@@ -83,3 +83,18 @@ workitems:
       adrs: []
       feature: null
       opnote: null
+  fix-hook-cross-platform-compatibility:
+    id: 6
+    description: "Fix hook commands to use explicit uv invocation instead of shebangs for cross-platform compatibility"
+    track: micro
+    stage: DONE
+    branch: feat/fix-hook-cross-platform-compatibility
+    started: 2026-03-19
+    checkpoint: 4
+    docs:
+      prd: null
+      discovery: null
+      specs: []
+      adrs: []
+      feature: null
+      opnote: null

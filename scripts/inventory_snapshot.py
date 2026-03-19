@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.10"
-# dependencies = []
-# ///
 """UserPromptSubmit hook entry point.
 
 Snapshots skill inventory on each conversation start, diffs against
