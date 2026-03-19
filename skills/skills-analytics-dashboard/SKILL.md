@@ -1,5 +1,5 @@
 ---
-name: analytics-dashboard
+name: skills-analytics-dashboard
 description: Launch the skills analytics dashboard to view usage metrics, scores, and trends
 metadata:
   triggers:
@@ -9,7 +9,7 @@ metadata:
     - open dashboard
 ---
 
-# analytics-dashboard
+# skills-analytics-dashboard
 
 Launch the skills analytics dashboard — a local web UI for viewing skill usage frequency, adoption curves, usefulness scores, trends, and structure coverage.
 

@@ -101,12 +101,12 @@ class TestHooksJson:
 class TestDashboardSkill:
     @pytest.mark.unit
     def test_skill_md_exists(self):
-        path = os.path.join(PROJECT_ROOT, "skills", "analytics-dashboard", "SKILL.md")
-        assert os.path.isfile(path), "skills/analytics-dashboard/SKILL.md must exist"
+        path = os.path.join(PROJECT_ROOT, "skills", "skills-analytics-dashboard", "SKILL.md")
+        assert os.path.isfile(path), "skills/skills-analytics-dashboard/SKILL.md must exist"
 
     @pytest.mark.unit
     def test_skill_md_has_frontmatter(self):
-        path = os.path.join(PROJECT_ROOT, "skills", "analytics-dashboard", "SKILL.md")
+        path = os.path.join(PROJECT_ROOT, "skills", "skills-analytics-dashboard", "SKILL.md")
         with open(path) as f:
             content = f.read()
         assert content.startswith("---"), "SKILL.md must start with YAML frontmatter"
@@ -115,21 +115,21 @@ class TestDashboardSkill:
 
     @pytest.mark.unit
     def test_skill_md_has_name(self):
-        path = os.path.join(PROJECT_ROOT, "skills", "analytics-dashboard", "SKILL.md")
+        path = os.path.join(PROJECT_ROOT, "skills", "skills-analytics-dashboard", "SKILL.md")
         with open(path) as f:
             content = f.read()
-        assert "name: analytics-dashboard" in content, "SKILL.md must declare name: analytics-dashboard"
+        assert "name: skills-analytics-dashboard" in content, "SKILL.md must declare name: skills-analytics-dashboard"
 
     @pytest.mark.unit
     def test_skill_md_has_description(self):
-        path = os.path.join(PROJECT_ROOT, "skills", "analytics-dashboard", "SKILL.md")
+        path = os.path.join(PROJECT_ROOT, "skills", "skills-analytics-dashboard", "SKILL.md")
         with open(path) as f:
             content = f.read()
         assert "description:" in content, "SKILL.md must have a description"
 
     @pytest.mark.unit
     def test_skill_md_mentions_dashboard_command(self):
-        path = os.path.join(PROJECT_ROOT, "skills", "analytics-dashboard", "SKILL.md")
+        path = os.path.join(PROJECT_ROOT, "skills", "skills-analytics-dashboard", "SKILL.md")
         with open(path) as f:
             content = f.read()
         assert "django" in content.lower() or "runserver" in content.lower() or "8787" in content, \

@@ -71,7 +71,7 @@ Start a new Claude Code session for the hooks to take effect. Every prompt you s
 
 ### 3. Launch the dashboard
 
-Use the `/analytics-dashboard` skill in any Claude Code session. It starts a local server and opens the dashboard at http://localhost:8787.
+Use the `/skills-analytics-dashboard` skill in any Claude Code session. It starts a local server and opens the dashboard at http://localhost:8787.
 
 
 ## Architecture
@@ -101,8 +101,8 @@ hooks/
     hooks.json                    # Hook declarations (auto-registered on install)
 
 skills/
-    analytics-dashboard/
-        SKILL.md                  # /analytics-dashboard skill
+    skills-analytics-dashboard/
+        SKILL.md                  # /skills-analytics-dashboard skill
 
 scripts/                          # Hook scripts (stdlib only, fast)
     db.py                         # SQLite connection, schema, CRUD
