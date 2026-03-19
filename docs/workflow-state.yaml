@@ -16,6 +16,8 @@ workitems:
       discovery: docs/discovery/disco-1.md
       specs:
         - docs/specs/spec-skills-analytics.md
-      adrs: []
+      adrs:
+        - docs/adrs/adr-1-plugin-packaging.md
+        - docs/adrs/adr-1-sqlite-storage.md
       feature: null
       opnote: null
