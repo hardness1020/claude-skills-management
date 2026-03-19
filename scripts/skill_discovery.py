@@ -84,36 +84,51 @@ def discover_plugin_skills(project_dir: str = None) -> list[dict]:
     except (json.JSONDecodeError, OSError):
         return []
 
-    skills = []
-    for plugin_key, plugin_info in installed.items():
-        install_path = plugin_info.get("installPath", "")
-        scope = plugin_info.get("scope", "user")
+    # Format: {"version": 2, "plugins": {"name@marketplace": [{"scope":..., "installPath":...}, ...]}}
+    plugins_dict = installed.get("plugins", installed)
+    if not isinstance(plugins_dict, dict):
+        return []
 
-        # Look for skills in the plugin's skills/ directory
-        plugin_skills_dir = os.path.join(install_path, "skills")
-        if not os.path.isdir(plugin_skills_dir):
+    skills = []
+    for plugin_key, installations in plugins_dict.items():
+        # Each plugin can have multiple installations (different scopes)
+        if not isinstance(installations, list):
             continue
 
-        for entry in os.listdir(plugin_skills_dir):
-            skill_path = os.path.join(plugin_skills_dir, entry)
-            if not os.path.isdir(skill_path):
+        for plugin_info in installations:
+            if not isinstance(plugin_info, dict):
                 continue
 
-            skill_md = os.path.join(skill_path, "SKILL.md")
-            if not os.path.isfile(skill_md):
-                continue
+            install_path = plugin_info.get("installPath", "")
+            scope = plugin_info.get("scope", "user")
 
-            nested_files, file_types, hierarchies = _scan_nested_files(skill_path)
+            # Look for skills in the plugin's skills/ directory
+            # Check both top-level skills/ and .claude/skills/
+            for skills_subdir in ("skills", os.path.join(".claude", "skills")):
+                plugin_skills_dir = os.path.join(install_path, skills_subdir)
+                if not os.path.isdir(plugin_skills_dir):
+                    continue
 
-            skills.append({
-                "name": entry,
-                "source": "plugin",
-                "scope": scope,
-                "path": skill_path,
-                "nested_files": nested_files,
-                "file_types": file_types,
-                "hierarchies": hierarchies,
-            })
+                for entry in os.listdir(plugin_skills_dir):
+                    skill_path = os.path.join(plugin_skills_dir, entry)
+                    if not os.path.isdir(skill_path):
+                        continue
+
+                    skill_md = os.path.join(skill_path, "SKILL.md")
+                    if not os.path.isfile(skill_md):
+                        continue
+
+                    nested_files, file_types, hierarchies = _scan_nested_files(skill_path)
+
+                    skills.append({
+                        "name": entry,
+                        "source": "plugin",
+                        "scope": scope,
+                        "path": skill_path,
+                        "nested_files": nested_files,
+                        "file_types": file_types,
+                        "hierarchies": hierarchies,
+                    })
 
     return skills
 

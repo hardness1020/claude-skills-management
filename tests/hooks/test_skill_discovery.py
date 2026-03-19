@@ -45,10 +45,15 @@ def plugin_tree(tmp_path):
     (skill_dir / "SKILL.md").write_text("# Plugin Skill")
 
     installed = {
-        "my-plugin@marketplace": {
-            "scope": "user",
-            "installPath": str(cache_dir),
-            "version": "1.0.0",
+        "version": 2,
+        "plugins": {
+            "my-plugin@marketplace": [
+                {
+                    "scope": "user",
+                    "installPath": str(cache_dir),
+                    "version": "1.0.0",
+                }
+            ]
         }
     }
     (plugins_dir / "installed_plugins.json").write_text(json.dumps(installed))

@@ -21,3 +21,18 @@ workitems:
         - docs/adrs/adr-1-sqlite-storage.md
       feature: docs/features/ft-1-skills-analytics.md
       opnote: null
+  fix-module-import-and-plugin-discovery-format:
+    id: 2
+    description: "Fix module import and plugin discovery format"
+    track: micro
+    stage: F
+    branch: feat/fix-module-import-and-plugin-discovery-format
+    started: 2026-03-18
+    checkpoint: 0
+    docs:
+      prd: null
+      discovery: null
+      specs: []
+      adrs: []
+      feature: null
+      opnote: null
