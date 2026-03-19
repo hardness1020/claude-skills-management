@@ -1,10 +1,11 @@
-"""Unit tests for scripts/analytics.py."""
+"""Unit tests for dashboard/analytics/analytics.py."""
 
 import sqlite3
 import pytest
 from datetime import datetime, timedelta
 
-from scripts import db, analytics
+from scripts import db
+from dashboard.analytics import analytics
 
 
 @pytest.fixture
