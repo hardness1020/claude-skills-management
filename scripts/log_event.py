@@ -74,8 +74,9 @@ def _handle_skill_invocation(conn, data, tool_input):
             source = matches[0]["source"]
             scope = matches[0]["scope"]
 
+    now = datetime.now(timezone.utc).isoformat()
     db.insert_skill_invocation(conn, {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now,
         "session_id": data.get("session_id", ""),
         "skill_name": raw_name,
         "invocation_id": data.get("tool_use_id", ""),
@@ -84,6 +85,23 @@ def _handle_skill_invocation(conn, data, tool_input):
         "project_dir": data.get("cwd", ""),
         "args": tool_input.get("args", ""),
     })
+
+    # Record implicit SKILL.md read — Claude Code loads it internally
+    # without going through the Read tool hook
+    if matches:
+        skill_path = matches[0]["path"]
+        skill_md = os.path.join(skill_path, "SKILL.md")
+        if os.path.isfile(skill_md):
+            db.insert_file_access(conn, {
+                "timestamp": now,
+                "session_id": data.get("session_id", ""),
+                "skill_name": raw_name,
+                "file_path": skill_md,
+                "relative_path": "SKILL.md",
+                "file_type": "markdown",
+                "hierarchy": "content",
+                "project_dir": data.get("cwd", ""),
+            })
 
 
 def _handle_file_read(conn, data, tool_input):

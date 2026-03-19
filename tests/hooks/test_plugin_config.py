@@ -38,7 +38,7 @@ class TestPluginJson:
         with open(path) as f:
             data = json.load(f)
         assert "version" in data, "plugin.json must have 'version' field"
-        assert data["version"] == "1.0.0"
+        assert data["version"] == "1.2.0"
 
     @pytest.mark.unit
     def test_plugin_json_has_description(self):
