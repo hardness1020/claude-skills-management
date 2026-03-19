@@ -89,8 +89,8 @@ Claude Code Session
 | `inventory_snapshot.py` | Python 3.10+ | Snapshot skill inventory, diff for adds/removes | In: hook JSON (stdin); Out: hook response (stdout) | `db.py`, `skill_discovery.py` | Hook scripts |
 | `skill_discovery.py` | Python 3.10+ | Scan all skill sources and resolve scopes | In: filesystem + config files; Out: `list[SkillInfo]` | None (stdlib only) | Shared module |
 | `db.py` | Python 3.10+ / sqlite3 | Database schema, connection, write/read helpers | In: event dicts; Out: query results | None (stdlib only) | Shared module |
-| `analytics.py` | Python 3.10+ | Usefulness scoring computations | In: query results; Out: scored skill list | `db.py` | Dashboard |
-| Django dashboard | Django 4.2 | Single-page analytics dashboard | In: HTTP GET; Out: HTML + JSON API | `db.py`, `analytics.py` | Web app |
+| `dashboard/analytics/analytics.py` | Python 3.10+ | Usefulness scoring computations | In: query results; Out: scored skill list | `db.py` | Dashboard |
+| Django dashboard | Django 4.2 | Single-page analytics dashboard | In: HTTP GET; Out: HTML + JSON API | `db.py`, `dashboard/analytics/analytics.py` | Web app |
 | `hooks/hooks.json` | JSON config | Wire hooks to scripts | N/A | N/A | Plugin config |
 | `.claude-plugin/plugin.json` | JSON manifest | Plugin metadata | N/A | N/A | Plugin config |
 
@@ -498,7 +498,7 @@ Managed by Django's migration framework. Initial migration creates all tables ab
 
 | Test Type | Scope | Coverage Target |
 |-----------|-------|-----------------|
-| Unit | `skill_discovery.py`, `analytics.py`, `db.py`, `log_event.py` | 90% |
+| Unit | `skill_discovery.py`, `dashboard/analytics/analytics.py`, `db.py`, `log_event.py` | 90% |
 | Integration | Hook → SQLite → Django API pipeline | Critical paths |
 | E2E | Install plugin → trigger skills → view dashboard | Key flows |
 

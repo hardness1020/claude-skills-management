@@ -80,7 +80,7 @@
 **Dependencies:**
 - `scripts/db.py` (shared by hooks and importable by Django)
 - `scripts/skill_discovery.py` (shared by inventory snapshot and Django)
-- `scripts/analytics.py` (used by Django views)
+- `dashboard/analytics/analytics.py` (used by Django views)
 
 ---
 

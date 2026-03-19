@@ -236,7 +236,7 @@ Claude Code Session
 | `scripts/db.py` | Shared module | SQLite schema, connection, write helpers |
 | `scripts/skill_discovery.py` | Shared module | Scans folder/plugin skill sources, resolves scopes |
 | `dashboard/` | Django app | Models, views, templates, static assets for the single-page dashboard |
-| `dashboard/analytics.py` | Module | Usefulness scoring: time-normalized rate, decay, depth, composite |
+| `dashboard/analytics/analytics.py` | Module | Usefulness scoring: time-normalized rate, decay, depth, composite |
 | `hooks/hooks.json` | Config | Hook definitions wiring PreToolUse and UserPromptSubmit to scripts |
 | `.claude-plugin/plugin.json` | Config | Plugin manifest |
 | `skills/analytics-dashboard/SKILL.md` | Skill | User-invocable skill to launch/open the dashboard |
