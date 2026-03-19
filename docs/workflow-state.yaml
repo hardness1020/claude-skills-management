@@ -7,7 +7,7 @@ workitems:
     id: 1
     description: "Multi-agent skill usage analytics — universal log format, Claude Code hook, and Django dashboard with frequency, adoption, underutilization, and trend analysis"
     track: large
-    stage: G
+    stage: H
     branch: feat/multi-agent-skill-usage-analytics
     started: 2026-03-18
     checkpoint: 3
