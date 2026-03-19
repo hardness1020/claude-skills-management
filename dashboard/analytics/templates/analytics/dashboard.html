@@ -383,7 +383,7 @@ function refresh() {
 }
 
 function params() {
-  return `start=${document.getElementById('inp-start').value}&end=${document.getElementById('inp-end').value}`;
+  return `start=${document.getElementById('inp-start').value}T00:00:00Z&end=${document.getElementById('inp-end').value}T23:59:59Z`;
 }
 function graceParam() {
   return `&grace_days=${document.getElementById('inp-grace').value}`;
