@@ -22,6 +22,7 @@ There is no open-source tool for measuring whether Claude Code skills are actual
 - Without usage data, teams cannot answer: Which skills are actually used? Which are declining? Which were installed but never invoked? Are new skills being adopted?
 - Comparing skills by raw invocation count is misleading because **skills are added at different times** (a skill installed yesterday can't be compared to one installed 3 months ago). Useful analytics must normalize for skill age.
 - Skills use **progressive disclosure**: a skill's nested files (scripts, reference docs, asset files) are loaded only when needed. A skill may have 10 internal files but only 3 get triggered in typical use. Tracking only top-level invocations misses this — you can't tell if a skill is well-structured or if half its content is dead weight.
+- **Nested files are added at different times**, just like skills themselves. A skill author may add new reference docs or scripts weeks after the initial skill creation. A naive depth score that divides accessed files by total files penalizes skills with recently added content that hasn't had time to be triggered yet.
 - The skill hierarchy (skill → markdown → references) is distinct from the script/asset hierarchy (skill → scripts → data files). Both need to be tracked separately to understand skill design quality.
 
 ## Users & Use Cases
@@ -39,6 +40,7 @@ There is no open-source tool for measuring whether Claude Code skills are actual
 8. A team lead sees that 3 skills were deleted last month. The dashboard shows their historical usage — one had zero invocations (good riddance), but another was moderately used, prompting investigation into why it was removed.
 4. A skill author sees that their skill has 8 nested reference files but only 2 are ever accessed — the other 6 may need restructuring or removal.
 5. A developer drills into a skill's structure coverage to see which scripts and nested docs are triggered vs. dormant.
+9. A skill author added 3 new reference files to their skill last week. The dashboard shows those files are in their grace period and excluded from the depth score — no false alarm about low coverage.
 7. A team lead compares usage between project-scoped plugin skills (shared across the team) and local folder-based skills to decide which folder skills should be promoted to plugins for wider adoption.
 
 ## Scope (MoSCoW)
@@ -56,6 +58,7 @@ There is no open-source tool for measuring whether Claude Code skills are actual
 - Underutilization detection using time-normalized analysis (see Usefulness Scoring below)
 - Usage trend analysis: time-series view of skill invocations over configurable intervals
 - Skill structure coverage: per-skill view showing which nested files are triggered vs. dormant, with separate tracking for the content hierarchy (markdown/references) and the script/asset hierarchy
+- Time-normalized nested file tracking: record `first_seen_at` per nested file, apply grace period and per-file access rate normalization (same principles as skill-level time normalization)
 - Time interval selector on dashboard (day, week, month, custom range)
 - All data stored locally (no telemetry, no remote calls)
 
@@ -104,7 +107,7 @@ There is no open-source tool for measuring whether Claude Code skills are actual
 
 ## Usefulness Scoring Model
 
-The core analytics challenge: skills are added at different times and may be improved during their lifetime. A simple "total invocations" ranking is meaningless. The system must use the following methods to fairly assess skill usefulness:
+The core analytics challenge: skills are added at different times, and **nested files within a skill are also added at different times**. A skill author may add new reference docs, scripts, or assets weeks after the skill was created. Just as comparing skills by raw invocation count is misleading, comparing nested file access counts without accounting for when each file was added is equally misleading. The system must use the following methods to fairly assess skill and nested file usefulness:
 
 ### 1. Time-Normalized Usage Rate
 
@@ -126,6 +129,16 @@ A skill that gets invoked but only triggers 1 of its 8 nested files is shallowly
 
 - **Metric**: `depth_score = unique_nested_files_accessed / total_nested_files_in_skill` (averaged over invocations in the time window)
 - **Interpretation**: Low depth + high invocations = the skill is used but its progressive disclosure structure may be bloated. High depth + low invocations = the skill is thorough when used but rarely needed.
+
+### 3a. Time-Normalized Nested File Scoring
+
+Nested files within a skill are added at different times — a new reference doc added last week shouldn't be penalized alongside files that have existed for months. The same time-normalization principles that apply to skills also apply to their nested files:
+
+- **Tracking**: Record `first_seen_at` for each nested file (detected via inventory snapshot diffs, just like skill additions). When a snapshot detects a new file in a skill directory that wasn't in the previous snapshot, it logs the file with a `first_seen_at` timestamp.
+- **Grace period**: Nested files younger than a configurable threshold (default: 7 days) are excluded from the depth score denominator — they haven't had enough time to be accessed.
+- **Per-file access rate**: `file_access_rate = access_count / days_since_first_seen` — normalizes for file age, allowing fair comparison between old and new files within the same skill.
+- **Decay per file**: Detect individual nested files whose access rate has dropped (recently useful reference that's now dormant vs. newly added file that never got traction).
+- **Dashboard output**: Structure coverage view shows each nested file with its age, access rate, and whether it's in its grace period — so skill authors can distinguish "new file, give it time" from "old file, never accessed, consider removing."
 
 ### 4. Composite Usefulness Score
 
@@ -155,13 +168,14 @@ usefulness = w1 * normalized_usage_rate
 - As a developer, I can identify underutilized skills using a time-normalized score that accounts for when each skill was installed
 - As a team lead, I can see deleted skills labeled as "removed" in the dashboard with their full historical usage preserved, so I can audit whether the right skills were removed
 - As a team lead, I can see a composite usefulness score per skill that factors in usage rate, decay, and depth
-- As a skill author, I can view structure coverage for my skill to see which nested files are triggered vs. dormant
+- As a skill author, I can view structure coverage for my skill to see which nested files are triggered vs. dormant, with per-file age and access rate
+- As a skill author, I can see which nested files are in their grace period (recently added) vs. mature but unaccessed
 - As a skill author, I can distinguish between content hierarchy access (markdown/references) and script/asset hierarchy access
 
 **Acceptance Criteria:**
 - Hook logs skill invocations with: timestamp, skill_name, invocation_id, duration_ms, source (folder/plugin), scope (user/project/local), and metadata
 - Hook logs nested file accesses with: timestamp, skill_name, file_path, file_type (markdown/script/asset/reference), and parent invocation_id
-- `UserPromptSubmit` hook snapshots the skill inventory on each conversation start; diffs detect `skill_added` and `skill_removed` events with timestamps
+- `UserPromptSubmit` hook snapshots the skill inventory (including nested files) on each conversation start; diffs detect `skill_added`/`skill_removed` events and nested file additions/removals with timestamps
 - Removed skills retain all historical data and are labeled "removed" in the dashboard
 - Dashboard loads and renders all 5 analysis views from a SQLite database
 - Time interval selector updates all views without page reload
@@ -170,7 +184,9 @@ usefulness = w1 * normalized_usage_rate
 - Decay detection compares recent usage rate vs. lifetime average and flags skills with significant decline
 - Adoption view shows first-use date and cumulative invocation curve per skill
 - Trend view shows a time-series chart of invocations with configurable granularity
-- Structure coverage view shows per-skill file tree with access counts, distinguishing content hierarchy from script hierarchy
+- Structure coverage view shows per-skill file tree with access counts, per-file age, access rate, and grace period status, distinguishing content hierarchy from script hierarchy
+- Nested files younger than their grace period (default 7 days) are excluded from the depth score denominator
+- Per-file access rate is normalized by file age (access_count / days_since_first_seen)
 
 ### Non-Functional Requirements
 
