@@ -59,7 +59,7 @@ Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/).
 ### 1. Add the marketplace and install
 
 ```bash
-claude plugin marketplace add hardness1020/agent-skills-management
+claude plugin marketplace add hardness1020/claude-skills-management
 claude plugin install skills-analytics
 ```
 

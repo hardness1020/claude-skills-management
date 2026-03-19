@@ -87,7 +87,7 @@ Plugin Install (user scope)
   "version": "1.0.0",
   "description": "Track and analyze Claude Code skill usage with a local dashboard",
   "author": { "name": "Marcus Chang" },
-  "repository": "https://github.com/hardness1020/agent-skills-management",
+  "repository": "https://github.com/hardness1020/claude-skills-management",
   "license": "MIT",
   "keywords": ["analytics", "skills", "dashboard", "usage-tracking"]
 }
