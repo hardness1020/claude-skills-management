@@ -538,15 +538,11 @@ skills-analytics/
 │   ├── log_event.py
 │   └── inventory_snapshot.py
 ├── dashboard/
-│   ├── manage.py
 │   ├── analytics_project/
 │   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
+│   │   └── urls.py
 │   └── analytics/
-│       ├── models.py
 │       ├── views.py
-│       ├── api.py
 │       ├── analytics.py
 │       ├── templates/
 │       │   └── analytics/
@@ -559,12 +555,14 @@ skills-analytics/
 │   └── analytics-dashboard/
 │       └── SKILL.md
 ├── tests/
-│   ├── test_db.py
-│   ├── test_skill_discovery.py
-│   ├── test_log_event.py
-│   ├── test_inventory_snapshot.py
-│   ├── test_analytics.py
-│   └── test_api.py
+│   ├── hooks/
+│   │   ├── test_db.py
+│   │   ├── test_skill_discovery.py
+│   │   ├── test_log_event.py
+│   │   └── test_inventory_snapshot.py
+│   └── dashboard/
+│       ├── test_analytics.py
+│       └── test_api.py
 └── README.md
 ```
 
