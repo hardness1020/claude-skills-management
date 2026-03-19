@@ -1,0 +1,28 @@
+{
+  "description": "Skills analytics usage tracking hooks",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/log_event.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/inventory_snapshot.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

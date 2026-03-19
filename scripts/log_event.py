@@ -78,7 +78,10 @@ def _handle_file_read(conn, data, tool_input):
     if not file_path:
         return
 
-    result = skill_discovery.resolve_skill_for_path(file_path)
+    all_skills = skill_discovery.discover_all(project_dir=data.get("cwd", ""))
+    skill_paths = {s["path"]: s for s in all_skills}
+
+    result = skill_discovery.resolve_skill_for_path(file_path, skill_paths=skill_paths)
     if result is None:
         return
 
