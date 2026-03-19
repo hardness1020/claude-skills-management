@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Skills Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0F1C;--panel:#1E293B;--dark:#0F172A;
+  --cyan:#22D3EE;--white:#FFFFFF;--t1:#94A3B8;--t2:#64748B;--t3:#475569;
+  --red:#EF4444;--blue1:#0EA5E9;--blue2:#06B6D4;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:var(--mono)}
+input[type="date"],input[type="number"],input[type="text"]{
+  background:var(--dark);border:none;color:var(--t1);font-family:var(--mono);
+  font-size:14px;font-weight:500;height:32px;border-radius:6px;padding:0 12px;outline:none;
+}
+input[type="date"]{width:140px}
+input[type="number"]{width:52px;text-align:center;padding:0 10px}
+input[type="text"]{width:300px;height:40px;border-radius:8px;background:var(--panel);font-family:var(--sans);padding:0 14px}
+input[type="text"]::placeholder{color:var(--t3)}
+
+/* Layout */
+.app{display:flex;flex-direction:column;height:100vh;max-height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;height:56px;background:var(--panel);padding:0 24px;flex-shrink:0}
+.header h1{font-size:18px;font-weight:700;font-family:var(--mono)}
+.controls{display:flex;align-items:center;gap:16px}
+.controls label{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:1px}
+.divider{width:1px;height:28px;background:var(--dark)}
+.btn-refresh{height:32px;background:var(--cyan);color:var(--bg);border:none;border-radius:6px;padding:0 16px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer}
+.btn-refresh:hover{opacity:0.9}
+
+/* Tab bar */
+.tab-bar{display:flex;align-items:center;height:44px;background:var(--dark);padding:0 24px;flex-shrink:0}
+.tab{height:100%;display:flex;align-items:center;justify-content:center;padding:0 20px;cursor:pointer;
+  color:var(--t2);font-family:var(--mono);font-size:14px;font-weight:500;border-bottom:2px solid transparent}
+.tab.active{color:var(--cyan);font-weight:600;border-bottom-color:var(--cyan)}
+.tab:hover:not(.active){color:var(--t1)}
+
+/* Tab panels */
+.tab-panel{display:none;flex:1;min-height:0;padding:20px;gap:20px}
+.tab-panel.active{display:flex}
+
+/* Panels */
+.panel{background:var(--panel);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+
+/* Table headers */
+.tbl-header{display:flex;align-items:center;height:44px;background:var(--dark);padding:0 16px;flex-shrink:0}
+.tbl-header span{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:1.5px}
+.tbl-body{flex:1;overflow-y:auto}
+
+/* Scrollbar */
+.tbl-body::-webkit-scrollbar{width:6px}
+.tbl-body::-webkit-scrollbar-track{background:transparent}
+.tbl-body::-webkit-scrollbar-thumb{background:var(--t3);border-radius:3px}
+
+/* Score row */
+.score-row{display:flex;align-items:center;height:48px;padding:0 16px;border-bottom:1px solid var(--dark);cursor:pointer;transition:background .15s}
+.score-row:hover{background:#ffffff08}
+.score-row.selected{background:#22D3EE12}
+.score-row.grace{opacity:0.6}
+
+/* Bar component */
+.bar-track{height:10px;background:var(--dark);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.decay-track{height:8px;background:var(--dark);border-radius:3px;overflow:hidden}
+.decay-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 6px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:700}
+.badge-new{background:var(--cyan);color:var(--bg)}
+.badge-tag{height:24px;padding:0 10px;border-radius:4px;font-size:12px;font-weight:500}
+.badge-active{background:#22D3EE26;color:var(--cyan);font-weight:600}
+.badge-removed{background:#64748B26;color:var(--t2);font-weight:600}
+.badge-source{background:var(--dark);color:var(--t1)}
+.badge-folder{background:#22D3EE26;color:var(--cyan)}
+.badge-type{height:22px;padding:0 8px;border-radius:4px;background:var(--dark);color:var(--t1);font-size:11px;font-weight:500}
+
+/* Info icon + tooltip */
+.info-wrap{display:inline-flex;align-items:center;gap:6px}
+.info-icon{width:14px;height:14px;flex-shrink:0;cursor:help;color:var(--t3);display:inline-flex}
+.info-icon svg{width:14px;height:14px}
+.tooltip{display:none;position:fixed;z-index:1000;
+  width:395px;background:var(--panel);border:1px solid #22D3EE40;border-radius:8px;padding:14px;
+  box-shadow:0 4px 16px #00000066;pointer-events:none}
+.tooltip.visible{display:block}
+.tooltip h4{color:var(--cyan);font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:6px}
+.tooltip p{color:var(--t1);font-family:var(--sans);font-size:12px;line-height:1.4;margin-bottom:6px}
+.tooltip code{color:var(--white);font-family:var(--mono);font-size:11px;font-weight:500;line-height:1.4;display:block;padding:2px 0}
+
+/* Coverage panel */
+.cov-header{display:flex;align-items:center;justify-content:space-between;height:56px;background:var(--dark);padding:0 20px;flex-shrink:0}
+.cov-header .name{color:var(--cyan);font-size:16px;font-weight:700}
+.cov-header .sub{color:var(--t2);font-family:var(--sans);font-size:14px;font-weight:500;margin-left:10px}
+.cov-metrics{display:flex;gap:20px;align-items:center}
+.cov-metric label{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:500;margin-right:6px}
+.cov-metric span{font-size:16px;font-weight:700}
+.cov-metric .cyan{color:var(--cyan)}
+.cov-file-hdr{display:flex;align-items:center;height:40px;border-bottom:1px solid var(--dark);padding:0 20px;flex-shrink:0}
+.cov-file-hdr span{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:1.5px}
+.cov-file-row{display:flex;align-items:center;height:44px;border-bottom:1px solid var(--dark);padding:0 20px}
+.cov-file-row.dormant{border-bottom-color:#EF444426}
+.cov-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px}
+
+/* Frequency panel */
+.freq-panel{width:480px;padding:20px;gap:12px}
+.freq-title{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:1.5px}
+.freq-sub{color:var(--t1);font-size:14px;font-weight:500}
+.freq-bars{flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.freq-bar{display:flex;align-items:center;height:40px;gap:12px;flex-shrink:0}
+.freq-bar .name{width:140px;flex-shrink:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.freq-bar .track{flex:1;height:28px;background:var(--dark);border-radius:4px;overflow:hidden}
+.freq-bar .fill{height:100%;background:var(--cyan);border-radius:4px;transition:width .3s}
+.freq-bar .val{color:var(--cyan);font-size:14px;font-weight:700;min-width:28px;text-align:right}
+
+/* Trends panel */
+.trends-panel{flex:1;padding:20px;gap:12px}
+.trends-hdr{display:flex;align-items:center;justify-content:space-between}
+.trends-title{color:var(--t2);font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:1.5px}
+.gran-toggle{display:flex;height:30px;background:var(--dark);border-radius:6px;padding:2px;gap:2px}
+.gran-btn{height:100%;padding:0 12px;border:none;border-radius:4px;background:transparent;
+  color:var(--t2);font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer}
+.gran-btn.active{background:var(--cyan);color:var(--bg);font-weight:600}
+.chart-wrap{flex:1;position:relative;min-height:0}
+.chart-legend{display:flex;gap:24px;align-items:center;padding-top:8px;flex-shrink:0}
+.legend-item{display:flex;align-items:center;gap:8px}
+.legend-dot{width:12px;height:12px;border-radius:3px}
+.legend-label{color:var(--t1);font-size:12px;font-weight:500}
+
+/* Inventory */
+.inv-filter{display:flex;align-items:center;height:40px;gap:16px;flex-shrink:0}
+.inv-stats{display:flex;gap:24px;align-items:center;margin-left:auto}
+.inv-stats .total{color:var(--cyan);font-size:14px;font-weight:600}
+.inv-stats .active{color:var(--t1);font-size:14px;font-weight:500}
+.inv-stats .removed{color:var(--t2);font-size:14px;font-weight:500}
+.inv-row{display:flex;align-items:center;height:48px;padding:0 20px;border-bottom:1px solid var(--dark)}
+.inv-row.removed{opacity:0.5}
+
+/* Truncate */
+.truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Column widths - usefulness */
+.col-num{width:36px;flex-shrink:0;padding:0 4px;font-size:14px;font-weight:600;color:var(--t1)}
+.col-skill{width:190px;flex-shrink:0;padding:0 8px;overflow:hidden}
+.col-score{width:270px;flex-shrink:0;padding:0 8px;display:flex;align-items:center;gap:8px}
+.col-rate{width:100px;flex-shrink:0;padding:0 8px}
+.col-decay{width:160px;flex-shrink:0;padding:0 8px;display:flex;align-items:center;gap:6px}
+.col-age{flex:1;padding:0 8px}
+
+/* Column widths - coverage files */
+.cf-file{flex:1;overflow:hidden;padding:0 4px}
+.cf-type{width:90px;flex-shrink:0;padding:0 4px}
+.cf-hits{width:80px;flex-shrink:0;padding:0 4px}
+.cf-rate{width:90px;flex-shrink:0;padding:0 4px}
+
+/* Column widths - inventory */
+.ic-name{width:240px;flex-shrink:0;padding:0 8px;overflow:hidden}
+.ic-source{width:110px;flex-shrink:0;padding:0 8px}
+.ic-scope{width:110px;flex-shrink:0;padding:0 8px}
+.ic-status{width:110px;flex-shrink:0;padding:0 8px}
+.ic-first{width:180px;flex-shrink:0;padding:0 8px}
+.ic-last{width:180px;flex-shrink:0;padding:0 8px}
+.ic-files{flex:1;padding:0 8px;text-align:right}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>Skills Analytics</h1>
+    <div class="controls">
+      <label>Start</label>
+      <input type="date" id="inp-start">
+      <label>End</label>
+      <input type="date" id="inp-end">
+      <label>Grace</label>
+      <input type="number" id="inp-grace" value="7" min="0" max="90">
+      <div class="divider"></div>
+      <button class="btn-refresh" onclick="refresh()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <div class="tab active" data-tab="usefulness">Usefulness</div>
+    <div class="tab" data-tab="usage">Usage</div>
+    <div class="tab" data-tab="inventory">Inventory</div>
+  </div>
+
+  <!-- Tab 1: Usefulness -->
+  <div class="tab-panel active" id="tab-usefulness">
+    <!-- Scores panel -->
+    <div class="panel" style="width:820px;flex-shrink:0">
+      <div class="tbl-header">
+        <span class="col-num">#</span>
+        <span class="col-skill">SKILL</span>
+        <span class="col-score">
+          <span class="info-wrap">SCORE
+            <span class="info-icon" data-tip="tip-score"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          </span>
+        </span>
+        <span class="col-rate">
+          <span class="info-wrap">RATE
+            <span class="info-icon" data-tip="tip-rate"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          </span>
+        </span>
+        <span class="col-decay">
+          <span class="info-wrap">DECAY
+            <span class="info-icon" data-tip="tip-decay"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          </span>
+        </span>
+        <span class="col-age">AGE</span>
+      </div>
+      <div class="tbl-body" id="scores-body"></div>
+    </div>
+
+    <!-- Coverage panel -->
+    <div class="panel" style="flex:1">
+      <div class="cov-header" id="cov-header">
+        <div>
+          <span class="name" id="cov-name">-</span>
+        </div>
+        <div class="cov-metrics" id="cov-metrics">
+          <div class="cov-metric"><label>Files</label><span id="cov-total">-</span></div>
+          <div class="cov-metric"><label>Accessed</label><span class="cyan" id="cov-accessed">-</span></div>
+          <div class="cov-metric"><label>Depth</label><span class="cyan" id="cov-depth">-</span></div>
+        </div>
+      </div>
+      <div class="cov-file-hdr">
+        <span class="cf-file">FILE</span>
+        <span class="cf-type">TYPE</span>
+        <span class="cf-hits">HITS</span>
+        <span class="cf-rate">RATE</span>
+      </div>
+      <div class="tbl-body" id="cov-body">
+        <div class="cov-empty">Select a skill to view coverage</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Usage -->
+  <div class="tab-panel" id="tab-usage">
+    <!-- Frequency -->
+    <div class="panel freq-panel">
+      <div class="freq-title">FREQUENCY</div>
+      <div class="freq-sub" id="freq-sub">-</div>
+      <div class="freq-bars" id="freq-bars"></div>
+    </div>
+
+    <!-- Trends -->
+    <div class="panel trends-panel">
+      <div class="trends-hdr">
+        <span class="trends-title">TRENDS</span>
+        <div class="gran-toggle">
+          <button class="gran-btn active" data-g="day">Day</button>
+          <button class="gran-btn" data-g="week">Week</button>
+          <button class="gran-btn" data-g="month">Month</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="trends-chart"></canvas></div>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Inventory -->
+  <div class="tab-panel" id="tab-inventory" style="flex-direction:column">
+    <div class="inv-filter">
+      <input type="text" id="inv-filter" placeholder="Filter by skill name...">
+      <div class="inv-stats">
+        <span class="total" id="inv-total">-</span>
+        <span class="active" id="inv-active">-</span>
+        <span class="removed" id="inv-removed">-</span>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="tbl-header" style="padding:0 20px">
+        <span class="ic-name">NAME</span>
+        <span class="ic-source">SOURCE</span>
+        <span class="ic-scope">SCOPE</span>
+        <span class="ic-status">STATUS</span>
+        <span class="ic-first">FIRST SEEN</span>
+        <span class="ic-last">LAST INVOKED</span>
+        <span class="ic-files">FILES</span>
+      </div>
+      <div class="tbl-body" id="inv-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltips (body-level, fixed position) -->
+<div class="tooltip" id="tip-score">
+  <h4>Usefulness Score</h4>
+  <p>Composite score (0.0 - 1.0) combining three weighted factors:</p>
+  <code>40%  Usage rate (invocations/day, max 10)</code>
+  <code>35%  Freshness (1 - decay ratio)</code>
+  <code>25%  Depth (nested files accessed)</code>
+</div>
+<div class="tooltip" id="tip-rate">
+  <h4>Usage Rate</h4>
+  <p>Time-normalized invocations per day since the skill was first discovered. Accounts for skill age so new skills aren't penalized.</p>
+</div>
+<div class="tooltip" id="tip-decay">
+  <h4>Usage Decay</h4>
+  <p>Measures decline in recent usage vs lifetime average. 0.0 = steady or growing, 1.0 = completely stopped. Values above 0.5 are flagged red.</p>
+  <code>decay = 1 - (recent_14d_rate / lifetime_rate)</code>
+</div>
+
+<script>
+// --- Tooltip positioning ---
+document.querySelectorAll('.info-icon[data-tip]').forEach(icon => {
+  const tipId = icon.dataset.tip;
+  const tip = document.getElementById(tipId);
+  icon.addEventListener('mouseenter', () => {
+    const rect = icon.getBoundingClientRect();
+    tip.style.top = (rect.bottom + 8) + 'px';
+    tip.style.left = rect.left + 'px';
+    tip.classList.add('visible');
+  });
+  icon.addEventListener('mouseleave', () => {
+    tip.classList.remove('visible');
+  });
+});
+
+// --- State ---
+let selectedSkill = null;
+let trendsChart = null;
+let currentGranularity = 'day';
+const SKILL_COLORS = [
+  '#22D3EE','#0EA5E9','#06B6D4','#8B5CF6','#EC4899','#F59E0B','#10B981','#F43F5E','#6366F1','#14B8A6'
+];
+let skillColorMap = {};
+
+// --- Init ---
+(function init() {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 30);
+  document.getElementById('inp-start').value = fmt(start);
+  document.getElementById('inp-end').value = fmt(today);
+  refresh();
+})();
+
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'usage' && trendsChart) trendsChart.resize();
+  });
+});
+
+// --- Granularity toggle ---
+document.querySelectorAll('.gran-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.gran-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentGranularity = b.dataset.g;
+    loadTrends();
+  });
+});
+
+// --- Inventory filter ---
+document.getElementById('inv-filter').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('#inv-body .inv-row').forEach(r => {
+    r.style.display = r.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+
+// --- Refresh ---
+function refresh() {
+  loadUsefulness();
+  loadFrequency();
+  loadTrends();
+  loadInventory();
+}
+
+function params() {
+  return `start=${document.getElementById('inp-start').value}&end=${document.getElementById('inp-end').value}`;
+}
+function graceParam() {
+  return `&grace_days=${document.getElementById('inp-grace').value}`;
+}
+
+// --- Usefulness ---
+async function loadUsefulness() {
+  const res = await fetch(`/api/usefulness/?${params()}${graceParam()}`);
+  const data = await res.json();
+  const body = document.getElementById('scores-body');
+  body.innerHTML = '';
+
+  data.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'score-row' + (s.in_grace_period ? ' grace' : '');
+    if (selectedSkill === s.skill_name) row.classList.add('selected');
+    row.onclick = () => selectSkill(s.skill_name, row);
+
+    const scorePct = Math.min(s.score, 1) * 190;
+    const decayPct = Math.min(s.decay_ratio, 1) * 100;
+    const isHighDecay = s.decay_ratio > 0.5;
+    const barColor = s.in_grace_period ? 'var(--cyan)' : (s.score >= 0.5 ? 'var(--cyan)' : 'var(--t2)');
+    const scoreTextColor = s.score >= 0.5 ? 'var(--cyan)' : 'var(--t2)';
+    const decayColor = isHighDecay ? 'var(--red)' : 'var(--cyan)';
+    const nameColor = selectedSkill === s.skill_name ? 'var(--cyan)' : (s.score >= 0.5 ? 'var(--white)' : 'var(--t2)');
+    const rateColor = s.usage_rate >= 0.5 ? 'var(--white)' : 'var(--t3)';
+
+    row.innerHTML = `
+      <div class="col-num">${i + 1}</div>
+      <div class="col-skill" style="display:flex;align-items:center;gap:6px;overflow:hidden">
+        <span class="truncate" style="color:${nameColor};font-size:14px;font-weight:${selectedSkill === s.skill_name ? 600 : 500}">${esc(s.skill_name)}</span>
+        ${s.in_grace_period ? '<span class="badge badge-new">NEW</span>' : ''}
+      </div>
+      <div class="col-score">
+        <div class="bar-track" style="width:190px"><div class="bar-fill" style="width:${scorePct}px;background:${barColor}"></div></div>
+        <span style="color:${scoreTextColor};font-weight:700;font-size:14px">${s.score.toFixed(2)}</span>
+      </div>
+      <div class="col-rate" style="color:${rateColor};font-size:14px;font-weight:500">${s.usage_rate.toFixed(2)}</div>
+      <div class="col-decay">
+        <div class="decay-track" style="width:100px"><div class="decay-fill" style="width:${decayPct}px;background:${decayColor}"></div></div>
+        <span style="color:${isHighDecay ? 'var(--red)' : 'var(--t1)'};font-size:13px;font-weight:${isHighDecay ? 600 : 500}">${s.decay_ratio.toFixed(2)}</span>
+      </div>
+      <div class="col-age" style="color:var(--t1);font-size:14px;font-weight:500">${s.days_since_install}d</div>
+    `;
+    body.appendChild(row);
+  });
+
+  // Auto-select first if nothing selected
+  if (!selectedSkill && data.length > 0) {
+    const firstRow = body.querySelector('.score-row');
+    if (firstRow) selectSkill(data[0].skill_name, firstRow);
+  }
+}
+
+function selectSkill(name, rowEl) {
+  selectedSkill = name;
+  document.querySelectorAll('.score-row').forEach(r => r.classList.remove('selected'));
+  if (rowEl) rowEl.classList.add('selected');
+  // Update name colors
+  document.querySelectorAll('.score-row').forEach(r => {
+    const nameSpan = r.querySelector('.col-skill .truncate');
+    if (nameSpan) {
+      const isThis = r.classList.contains('selected');
+      nameSpan.style.color = isThis ? 'var(--cyan)' : '';
+      nameSpan.style.fontWeight = isThis ? '600' : '500';
+    }
+  });
+  loadCoverage(name);
+}
+
+async function loadCoverage(name) {
+  const covBody = document.getElementById('cov-body');
+  document.getElementById('cov-name').textContent = name;
+
+  try {
+    const res = await fetch(`/api/coverage/${encodeURIComponent(name)}/?${params()}`);
+    if (!res.ok) {
+      covBody.innerHTML = '<div class="cov-empty">No coverage data</div>';
+      document.getElementById('cov-total').textContent = '0';
+      document.getElementById('cov-accessed').textContent = '0';
+      document.getElementById('cov-depth').textContent = '0.00';
+      return;
+    }
+    const data = await res.json();
+
+    document.getElementById('cov-total').textContent = data.total_files;
+    document.getElementById('cov-accessed').textContent = data.accessed_files;
+    document.getElementById('cov-depth').textContent = data.depth_score.toFixed(2);
+
+    covBody.innerHTML = '';
+    if (data.files.length === 0) {
+      covBody.innerHTML = '<div class="cov-empty">No nested files registered</div>';
+      return;
+    }
+
+    // Sort: accessed first, then by access_count desc
+    data.files.sort((a, b) => b.access_count - a.access_count);
+
+    data.files.forEach(f => {
+      const isDormant = f.access_count === 0;
+      const row = document.createElement('div');
+      row.className = 'cov-file-row' + (isDormant ? ' dormant' : '');
+      row.innerHTML = `
+        <div class="cf-file"><span class="truncate" style="color:${isDormant ? 'var(--t2)' : 'var(--white)'};font-size:14px">${esc(f.relative_path)}</span></div>
+        <div class="cf-type"><span class="badge-type">${esc(f.file_type)}</span></div>
+        <div class="cf-hits" style="color:${f.access_count > 0 ? 'var(--cyan)' : 'var(--red)'};font-size:14px;font-weight:600">${f.access_count}</div>
+        <div class="cf-rate" style="color:${f.access_rate > 0 ? 'var(--white)' : 'var(--t3)'};font-size:14px;font-weight:500">${f.access_rate.toFixed(2)}</div>
+      `;
+      covBody.appendChild(row);
+    });
+  } catch {
+    covBody.innerHTML = '<div class="cov-empty">Error loading coverage</div>';
+  }
+}
+
+// --- Frequency ---
+async function loadFrequency() {
+  const res = await fetch(`/api/frequency/?${params()}`);
+  const data = await res.json();
+  const bars = document.getElementById('freq-bars');
+  bars.innerHTML = '';
+
+  const totalInvocations = data.reduce((s, d) => s + d.count, 0);
+  document.getElementById('freq-sub').textContent = `${data.length} skills invoked, ${totalInvocations} total times`;
+
+  const maxCount = data.length > 0 ? data[0].count : 1;
+
+  data.forEach(d => {
+    const pct = (d.count / maxCount) * 100;
+    const el = document.createElement('div');
+    el.className = 'freq-bar';
+    el.innerHTML = `
+      <span class="name">${esc(d.skill_name)}</span>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+      <span class="val">${d.count}</span>
+    `;
+    bars.appendChild(el);
+  });
+}
+
+// --- Trends ---
+async function loadTrends() {
+  const res = await fetch(`/api/trends/?${params()}&granularity=${currentGranularity}`);
+  const data = await res.json();
+
+  // Collect all skill names
+  const skillSet = new Set();
+  data.forEach(d => Object.keys(d.by_skill).forEach(s => skillSet.add(s)));
+  const skills = [...skillSet];
+
+  // Assign colors
+  skills.forEach((s, i) => { if (!skillColorMap[s]) skillColorMap[s] = SKILL_COLORS[i % SKILL_COLORS.length]; });
+
+  const labels = data.map(d => {
+    const dt = new Date(d.date + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
+
+  const datasets = skills.map(s => ({
+    label: s,
+    data: data.map(d => d.by_skill[s] || 0),
+    backgroundColor: skillColorMap[s],
+    borderRadius: { topLeft: 6, topRight: 6 },
+    barPercentage: 0.6,
+  }));
+
+  if (trendsChart) trendsChart.destroy();
+
+  const ctx = document.getElementById('trends-chart').getContext('2d');
+  trendsChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: '#0F172A' },
+          ticks: { color: '#475569', font: { family: 'JetBrains Mono', size: 12 } },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: '#0F172A' },
+          ticks: {
+            color: '#475569',
+            font: { family: 'JetBrains Mono', size: 12 },
+            stepSize: 1,
+            callback: v => Number.isInteger(v) ? v : '',
+          },
+        },
+      },
+    },
+  });
+
+  // Legend
+  const legend = document.getElementById('chart-legend');
+  legend.innerHTML = '';
+  skills.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${skillColorMap[s]}"></div><span class="legend-label">${esc(s)}</span>`;
+    legend.appendChild(item);
+  });
+}
+
+// --- Inventory ---
+async function loadInventory() {
+  const res = await fetch('/api/skills/');
+  const data = await res.json();
+  const body = document.getElementById('inv-body');
+  body.innerHTML = '';
+
+  const active = data.filter(s => s.status === 'active').length;
+  const removed = data.length - active;
+  document.getElementById('inv-total').textContent = `${data.length} skills`;
+  document.getElementById('inv-active').textContent = `${active} active`;
+  document.getElementById('inv-removed').textContent = `${removed} removed`;
+
+  data.forEach(s => {
+    const isRemoved = s.status === 'removed';
+    const row = document.createElement('div');
+    row.className = 'inv-row' + (isRemoved ? ' removed' : '');
+    row.dataset.name = s.name;
+
+    const sourceClass = s.source === 'folder' ? 'badge-tag badge-folder' : 'badge-tag badge-source';
+    const statusClass = isRemoved ? 'badge-tag badge-removed' : 'badge-tag badge-active';
+    const nameColor = isRemoved ? 'var(--t2)' : 'var(--cyan)';
+    const firstSeen = timeAgo(s.first_seen);
+    const lastInvoked = s.last_invoked ? timeAgo(s.last_invoked) : 'Never';
+    const lastColor = s.last_invoked ? (isRemoved ? 'var(--t3)' : 'var(--white)') : 'var(--t3)';
+    const filesColor = isRemoved ? 'var(--t3)' : 'var(--white)';
+
+    row.innerHTML = `
+      <div class="ic-name"><span class="truncate" style="color:${nameColor};font-size:14px;font-weight:500">${esc(s.name)}</span></div>
+      <div class="ic-source"><span class="${sourceClass}">${esc(s.source)}</span></div>
+      <div class="ic-scope"><span class="badge-tag badge-source">${esc(s.scope)}</span></div>
+      <div class="ic-status"><span class="${statusClass}">${esc(s.status)}</span></div>
+      <div class="ic-first" style="color:var(--t1);font-size:14px">${firstSeen}</div>
+      <div class="ic-last" style="color:${lastColor};font-size:14px">${lastInvoked}</div>
+      <div class="ic-files" style="color:${filesColor};font-size:14px;font-weight:600">${s.total_files}</div>
+    `;
+    body.appendChild(row);
+  });
+}
+
+// --- Helpers ---
+function fmt(d) { return d.toISOString().slice(0, 10); }
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function timeAgo(iso) {
+  if (!iso) return 'Never';
+  const now = new Date();
+  const then = new Date(iso);
+  const diffMs = now - then;
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  const days = Math.floor(diffMs / 86400000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+</script>
+</body>
+</html>

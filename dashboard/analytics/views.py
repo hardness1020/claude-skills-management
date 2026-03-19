@@ -28,11 +28,8 @@ def _get_conn():
 
 def dashboard(request):
     """Serve the single-page HTML dashboard."""
-    return HttpResponse(
-        "<html><head><title>Skills Analytics</title></head>"
-        "<body><h1>Skills Analytics Dashboard</h1></body></html>",
-        content_type="text/html",
-    )
+    template = loader.get_template("analytics/dashboard.html")
+    return HttpResponse(template.render({}, request))
 
 
 def api_frequency(request):

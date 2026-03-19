@@ -36,3 +36,18 @@ workitems:
       adrs: []
       feature: null
       opnote: null
+  dashboard-ui:
+    id: 3
+    description: "Build the dashboard UI with Chart.js — frequency, adoption, usefulness, trends, and coverage views"
+    track: medium
+    stage: DONE
+    branch: feat/dashboard-ui
+    started: 2026-03-19
+    checkpoint: 0
+    docs:
+      prd: null
+      discovery: null
+      specs: []
+      adrs: []
+      feature: null
+      opnote: null
