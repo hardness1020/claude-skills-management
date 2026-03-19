@@ -2,7 +2,7 @@
 
 **File:** docs/features/ft-1-skills-analytics.md
 **Owner:** Marcus Chang
-**TECH-SPECs:** `spec-skills-analytics.md` (v1.0.0)
+**TECH-SPECs:** spec-analytics.md (v1.0.0) — `docs/specs/spec-skills-analytics.md`
 
 ---
 
