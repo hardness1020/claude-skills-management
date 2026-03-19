@@ -13,7 +13,7 @@ workitems:
     checkpoint: 0
     docs:
       prd: docs/prds/prd.md
-      discovery: null
+      discovery: docs/discovery/disco-1.md
       specs: []
       adrs: []
       feature: null
