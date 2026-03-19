@@ -60,13 +60,27 @@ def main() -> None:
 
 def _handle_skill_invocation(conn, data, tool_input):
     """Log a skill invocation event."""
+    raw_name = tool_input.get("skill", "")
+    source = ""
+    scope = ""
+
+    if raw_name:
+        all_skills = skill_discovery.discover_all(project_dir=data.get("cwd", ""))
+        matches = [s for s in all_skills if s["name"] == raw_name]
+        if matches:
+            # Prefer narrowest scope: local > project > user
+            scope_priority = {"local": 0, "project": 1, "user": 2}
+            matches.sort(key=lambda s: scope_priority.get(s["scope"], 99))
+            source = matches[0]["source"]
+            scope = matches[0]["scope"]
+
     db.insert_skill_invocation(conn, {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": data.get("session_id", ""),
-        "skill_name": tool_input.get("skill", ""),
+        "skill_name": raw_name,
         "invocation_id": data.get("tool_use_id", ""),
-        "source": "",
-        "scope": "",
+        "source": source,
+        "scope": scope,
         "project_dir": data.get("cwd", ""),
         "args": tool_input.get("args", ""),
     })

@@ -15,18 +15,26 @@ def frequency_ranking(
     # Count invocations first, then join skill metadata
     rows = conn.execute(
         """SELECT si.skill_name, si.cnt,
-                  COALESCE(s.source, '') as source,
-                  COALESCE(s.scope, '') as scope,
+                  COALESCE(s.source, si.source_val) as source,
+                  COALESCE(s.scope, si.scope_val) as scope,
                   COALESCE(s.status, 'active') as status
            FROM (
-               SELECT skill_name, COUNT(*) as cnt
+               SELECT skill_name,
+                      COUNT(*) as cnt,
+                      MAX(source) as source_val,
+                      MAX(scope) as scope_val
                FROM skill_invocations
                WHERE timestamp >= ? AND timestamp <= ?
                GROUP BY skill_name
            ) si
-           LEFT JOIN skills s ON si.skill_name = s.name AND s.id = (
-               SELECT MIN(id) FROM skills WHERE name = si.skill_name
-           )
+           LEFT JOIN skills s ON si.skill_name = s.name
+               AND (si.source_val = '' OR s.source = si.source_val)
+               AND (si.scope_val = '' OR s.scope = si.scope_val)
+               AND s.id = (
+                   SELECT MIN(id) FROM skills WHERE name = si.skill_name
+                   AND (si.source_val = '' OR source = si.source_val)
+                   AND (si.scope_val = '' OR scope = si.scope_val)
+               )
            ORDER BY si.cnt DESC""",
         (start, end),
     ).fetchall()
@@ -104,10 +112,14 @@ def usefulness_scores(
         days_since = max((now - first_seen).days, 1)
         in_grace = days_since < grace_period_days
 
-        # Usage rate
+        # Usage rate — filter by source/scope when available to avoid
+        # double-counting when the same skill is installed at multiple scopes
         inv_count = conn.execute(
-            "SELECT COUNT(*) FROM skill_invocations WHERE skill_name = ? AND timestamp >= ? AND timestamp <= ?",
-            (name, start, end),
+            """SELECT COUNT(*) FROM skill_invocations
+               WHERE skill_name = ? AND timestamp >= ? AND timestamp <= ?
+               AND (source = '' OR source = ?)
+               AND (scope = '' OR scope = ?)""",
+            (name, start, end, source, scope),
         ).fetchone()[0]
         usage_rate = inv_count / days_since
 
@@ -117,8 +129,11 @@ def usefulness_scores(
             now - __import__("datetime").timedelta(days=14),
         ).isoformat()
         recent_count = conn.execute(
-            "SELECT COUNT(*) FROM skill_invocations WHERE skill_name = ? AND timestamp >= ?",
-            (name, recent_start),
+            """SELECT COUNT(*) FROM skill_invocations
+               WHERE skill_name = ? AND timestamp >= ?
+               AND (source = '' OR source = ?)
+               AND (scope = '' OR scope = ?)""",
+            (name, recent_start, source, scope),
         ).fetchone()[0]
         recent_days = max((now - datetime.fromisoformat(recent_start.replace("Z", "+00:00"))).days, 1)
         recent_rate = recent_count / recent_days
@@ -126,7 +141,9 @@ def usefulness_scores(
         if lifetime_rate > 0:
             decay_ratio = max(0.0, 1.0 - (recent_rate / lifetime_rate))
         else:
-            decay_ratio = 0.0
+            # No usage means no data to measure freshness — treat as
+            # fully decayed so unused skills don't get a free 0.35 score
+            decay_ratio = 1.0
 
         # Depth score
         if total_files and total_files > 0:

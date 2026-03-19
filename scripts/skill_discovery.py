@@ -95,6 +95,9 @@ def discover_plugin_skills(project_dir: str = None) -> list[dict]:
         if not isinstance(installations, list):
             continue
 
+        # Extract plugin name from key format "plugin_name@marketplace"
+        plugin_name = plugin_key.split("@")[0] if "@" in plugin_key else plugin_key
+
         for plugin_info in installations:
             if not isinstance(plugin_info, dict):
                 continue
@@ -120,8 +123,12 @@ def discover_plugin_skills(project_dir: str = None) -> list[dict]:
 
                     nested_files, file_types, hierarchies = _scan_nested_files(skill_path)
 
+                    # Prefix with plugin name to match Claude Code's
+                    # invocation format (e.g., "vibeflow:manage-work")
+                    prefixed_name = f"{plugin_name}:{entry}"
+
                     skills.append({
-                        "name": entry,
+                        "name": prefixed_name,
                         "source": "plugin",
                         "scope": scope,
                         "path": skill_path,

@@ -68,3 +68,18 @@ workitems:
         - docs/adrs/adr-1-plugin-packaging.md
       feature: docs/features/ft-4-plugin-packaging.md
       opnote: null
+  fix-skill-name-mismatch:
+    id: 5
+    description: "Fix skill name mismatch between invocations and skills table"
+    track: small
+    stage: DONE
+    branch: feat/fix-skill-name-mismatch
+    started: 2026-03-19
+    checkpoint: 0
+    docs:
+      prd: null
+      discovery: null
+      specs: []
+      adrs: []
+      feature: null
+      opnote: null

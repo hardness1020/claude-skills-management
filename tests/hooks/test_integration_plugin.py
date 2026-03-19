@@ -104,6 +104,63 @@ class TestFileReadIntegration:
         assert rows[0] == 0
 
 
+class TestSkillInvocationIntegration:
+    """Integration: Skill invocation → DB → analytics query matches."""
+
+    @pytest.mark.integration
+    def test_prefixed_invocation_matches_prefixed_skill_in_analytics(self, tmp_path, monkeypatch):
+        """Full pipeline: log prefixed invocation, upsert prefixed skill, verify analytics finds it."""
+        db_dir = tmp_path / "plugin_data"
+        db_dir.mkdir()
+        monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(db_dir))
+
+        # Simulate what log_event does: store invocation with prefixed name
+        conn = db.get_connection(str(db_dir / "skills_analytics.db"))
+        db.init_schema(conn)
+
+        # Simulate inventory_snapshot: store skill with prefixed name
+        db.upsert_skill(conn, {
+            "name": "vibeflow:manage-work",
+            "source": "plugin", "scope": "user",
+            "path": "/plugins/vibeflow/skills/manage-work",
+            "total_nested_files": 2,
+        })
+        # Backdate first_seen
+        conn.execute(
+            "UPDATE skills SET first_seen_at = '2026-03-01T00:00:00+00:00' WHERE name = 'vibeflow:manage-work'"
+        )
+        conn.commit()
+
+        # Simulate log_event: insert invocations with prefixed name
+        for i in range(5):
+            db.insert_skill_invocation(conn, {
+                "timestamp": f"2026-03-10T{10+i}:00:00Z",
+                "session_id": f"sess-{i}",
+                "skill_name": "vibeflow:manage-work",
+                "invocation_id": f"toolu_integ_{i}",
+                "source": "plugin", "scope": "user",
+                "project_dir": "/tmp", "args": "",
+            })
+
+        from dashboard.analytics import analytics
+
+        # Usefulness should find the invocations
+        scores = analytics.usefulness_scores(conn, "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z")
+        skill = [s for s in scores if s["skill_name"] == "vibeflow:manage-work"]
+        assert len(skill) == 1
+        assert skill[0]["usage_rate"] > 0
+        assert skill[0]["score"] > 0
+
+        # Frequency should also find them
+        freq = analytics.frequency_ranking(conn, "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z")
+        skill_freq = [f for f in freq if f["skill_name"] == "vibeflow:manage-work"]
+        assert len(skill_freq) == 1
+        assert skill_freq[0]["count"] == 5
+        assert skill_freq[0]["source"] == "plugin"
+
+        conn.close()
+
+
 class TestSecretKeyIntegration:
     """Integration: SECRET_KEY generation with real filesystem."""
 

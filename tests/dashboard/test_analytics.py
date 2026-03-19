@@ -23,7 +23,7 @@ def seed_skills(conn):
     db.upsert_skill(conn, {"name": "new-skill", "source": "folder", "scope": "user", "path": "/new", "total_nested_files": 1})
 
 
-def seed_invocations(conn, skill_name, count, start_date="2026-03-01"):
+def seed_invocations(conn, skill_name, count, start_date="2026-03-01", source="folder", scope="user"):
     """Insert test invocations spread over days."""
     base = datetime.fromisoformat(start_date)
     for i in range(count):
@@ -33,8 +33,8 @@ def seed_invocations(conn, skill_name, count, start_date="2026-03-01"):
             "session_id": f"sess-{i}",
             "skill_name": skill_name,
             "invocation_id": f"toolu_{skill_name}_{i}",
-            "source": "folder",
-            "scope": "user",
+            "source": source,
+            "scope": scope,
             "project_dir": "/tmp",
             "args": "",
         })
@@ -178,6 +178,82 @@ class TestUsefulnessScores:
             weights={"w1": 1.0, "w2": 0.0, "w3": 0.0},
         )
         assert len(result) >= 1
+
+    @pytest.mark.unit
+    def test_unused_skill_scores_zero(self, conn):
+        """A skill with zero invocations should score 0.0, not 0.35.
+
+        Previously, decay_ratio was 0.0 when there was no usage, giving
+        a free freshness score of 0.35. Now decay_ratio is 1.0 (fully
+        decayed) for unused skills.
+        """
+        seed_skills(conn)
+        conn.execute(
+            "UPDATE skills SET first_seen_at = ? WHERE name = 'unused'",
+            ((datetime.now() - timedelta(days=30)).isoformat() + "Z",)
+        )
+        conn.commit()
+
+        result = analytics.usefulness_scores(
+            conn, "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z"
+        )
+        unused = [r for r in result if r["skill_name"] == "unused"]
+        assert len(unused) == 1
+        assert unused[0]["score"] == 0.0
+        assert unused[0]["decay_ratio"] == 1.0
+
+    @pytest.mark.unit
+    def test_prefixed_invocations_match_prefixed_skills(self, conn):
+        """Invocations stored as 'vibeflow:manage-work' must match skills
+        stored with the same prefixed name."""
+        db.upsert_skill(conn, {
+            "name": "vibeflow:manage-work",
+            "source": "plugin", "scope": "user",
+            "path": "/plugins/vibeflow/skills/manage-work",
+            "total_nested_files": 1,
+        })
+        conn.execute(
+            "UPDATE skills SET first_seen_at = ? WHERE name = 'vibeflow:manage-work'",
+            ((datetime.now() - timedelta(days=10)).isoformat() + "Z",)
+        )
+        conn.commit()
+        seed_invocations(conn, "vibeflow:manage-work", 5, source="plugin", scope="user")
+
+        result = analytics.usefulness_scores(
+            conn, "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z"
+        )
+        skill = [r for r in result if r["skill_name"] == "vibeflow:manage-work"]
+        assert len(skill) == 1
+        assert skill[0]["usage_rate"] > 0
+        assert skill[0]["score"] > 0
+
+    @pytest.mark.unit
+    def test_same_skill_different_scopes_no_double_count(self, conn):
+        """Same skill at user and local scope should not double-count invocations."""
+        for s in ("user", "local"):
+            db.upsert_skill(conn, {
+                "name": "vibeflow:manage-work",
+                "source": "plugin", "scope": s,
+                "path": f"/plugins/vibeflow/skills/manage-work-{s}",
+                "total_nested_files": 1,
+            })
+            conn.execute(
+                "UPDATE skills SET first_seen_at = ? WHERE name = 'vibeflow:manage-work' AND scope = ?",
+                ((datetime.now() - timedelta(days=10)).isoformat() + "Z", s)
+            )
+        conn.commit()
+        # Invocations are for the local scope
+        seed_invocations(conn, "vibeflow:manage-work", 5, source="plugin", scope="local")
+
+        result = analytics.usefulness_scores(
+            conn, "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z"
+        )
+        skills = [r for r in result if r["skill_name"] == "vibeflow:manage-work"]
+        assert len(skills) == 2  # both scope entries exist
+        local = [s for s in skills if s["usage_rate"] > 0]
+        user = [s for s in skills if s["usage_rate"] == 0]
+        assert len(local) == 1  # only local has invocations
+        assert len(user) == 1   # user scope shows 0
 
 
 # --- usage_trends ---

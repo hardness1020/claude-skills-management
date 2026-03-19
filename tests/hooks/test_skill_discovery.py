@@ -159,9 +159,44 @@ class TestDiscoverPluginSkills:
         monkeypatch.setattr(os.path, "expanduser", lambda x: str(plugin_tree) if x == "~" else x)
         result = skill_discovery.discover_plugin_skills(str(plugin_tree))
         assert len(result) >= 1
-        plugin_skill = [s for s in result if s["name"] == "plugin-skill"]
+        plugin_skill = [s for s in result if s["name"] == "my-plugin:plugin-skill"]
         assert len(plugin_skill) == 1
         assert plugin_skill[0]["source"] == "plugin"
+
+    @pytest.mark.unit
+    def test_prefixes_skill_name_with_plugin_name(self, plugin_tree, monkeypatch):
+        """Plugin skills must be prefixed with 'plugin_name:' to match
+        Claude Code's invocation format (e.g., 'vibeflow:manage-work')."""
+        monkeypatch.setenv("HOME", str(plugin_tree))
+        monkeypatch.setattr(os.path, "expanduser", lambda x: str(plugin_tree) if x == "~" else x)
+        result = skill_discovery.discover_plugin_skills(str(plugin_tree))
+        names = [s["name"] for s in result]
+        # Must use prefix format, not bare directory name
+        assert "plugin-skill" not in names
+        assert "my-plugin:plugin-skill" in names
+
+    @pytest.mark.unit
+    def test_prefix_extracted_from_plugin_key(self, tmp_path, monkeypatch):
+        """Plugin name is extracted from the key before '@'."""
+        claude_dir = tmp_path / ".claude" / "plugins"
+        claude_dir.mkdir(parents=True)
+        cache_dir = claude_dir / "cache" / "mp" / "cool-tool" / "1.0.0"
+        skill_dir = cache_dir / "skills" / "do-thing"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Do Thing")
+        installed = {
+            "version": 2,
+            "plugins": {
+                "cool-tool@mp": [{
+                    "scope": "user",
+                    "installPath": str(cache_dir),
+                }]
+            },
+        }
+        (claude_dir / "installed_plugins.json").write_text(json.dumps(installed))
+        monkeypatch.setattr(os.path, "expanduser", lambda x: str(tmp_path) if x == "~" else x)
+        result = skill_discovery.discover_plugin_skills(str(tmp_path))
+        assert result[0]["name"] == "cool-tool:do-thing"
 
 
 # --- discover_all ---

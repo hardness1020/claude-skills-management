@@ -114,7 +114,10 @@ def api_skills(request):
     conn = _get_conn()
     rows = conn.execute(
         """SELECT s.name, s.source, s.scope, s.status, s.first_seen_at,
-                  (SELECT MAX(timestamp) FROM skill_invocations WHERE skill_name = s.name) as last_invoked,
+                  (SELECT MAX(timestamp) FROM skill_invocations
+                   WHERE skill_name = s.name
+                   AND (source = '' OR source = s.source)
+                   AND (scope = '' OR scope = s.scope)) as last_invoked,
                   s.total_nested_files
            FROM skills s
            ORDER BY s.name"""
