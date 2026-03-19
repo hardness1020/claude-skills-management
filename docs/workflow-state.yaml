@@ -25,10 +25,10 @@ workitems:
     id: 2
     description: "Fix module import and plugin discovery format"
     track: micro
-    stage: F
+    stage: DONE
     branch: feat/fix-module-import-and-plugin-discovery-format
     started: 2026-03-18
-    checkpoint: 0
+    checkpoint: 4
     docs:
       prd: null
       discovery: null
