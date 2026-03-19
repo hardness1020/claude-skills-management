@@ -14,11 +14,6 @@ def rf():
     return RequestFactory()
 
 
-@pytest.fixture
-def mock_conn():
-    """Provide a mock DB connection."""
-    return MagicMock()
-
 
 # --- GET / (dashboard) ---
 
@@ -41,7 +36,7 @@ class TestApiFrequency:
         mock_analytics.frequency_ranking.return_value = [
             {"skill_name": "commit", "count": 10, "source": "folder", "scope": "user", "status": "active"}
         ]
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/frequency/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_frequency(request)
@@ -68,7 +63,7 @@ class TestApiFrequency:
     @patch("dashboard.analytics.views.db")
     def test_returns_empty_array_on_no_data(self, mock_db, mock_analytics, rf):
         mock_analytics.frequency_ranking.return_value = []
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/frequency/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_frequency(request)
@@ -88,7 +83,7 @@ class TestApiAdoption:
         mock_analytics.adoption_curves.return_value = [
             {"skill_name": "commit", "first_seen": "2026-03-01", "cumulative": [{"date": "2026-03-01", "count": 1}]}
         ]
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/adoption/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_adoption(request)
@@ -115,7 +110,7 @@ class TestApiUsefulness:
         mock_analytics.usefulness_scores.return_value = [
             {"skill_name": "commit", "score": 0.85, "usage_rate": 1.2, "decay_ratio": 0.1, "depth_score": 0.8, "days_since_install": 30, "status": "active", "in_grace_period": False}
         ]
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/usefulness/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_usefulness(request)
@@ -129,7 +124,7 @@ class TestApiUsefulness:
     @patch("dashboard.analytics.views.db")
     def test_passes_grace_days_param(self, mock_db, mock_analytics, rf):
         mock_analytics.usefulness_scores.return_value = []
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/usefulness/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z", "grace_days": "14"})
         response = views.api_usefulness(request)
@@ -157,7 +152,7 @@ class TestApiTrends:
         mock_analytics.usage_trends.return_value = [
             {"date": "2026-03-01", "count": 5, "by_skill": {"commit": 3, "review": 2}}
         ]
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/trends/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z", "granularity": "day"})
         response = views.api_trends(request)
@@ -196,7 +191,7 @@ class TestApiCoverage:
                 {"relative_path": "SKILL.md", "file_type": "markdown", "hierarchy": "content", "access_count": 5, "first_seen_at": "2026-03-01", "days_since_first_seen": 17, "access_rate": 0.29, "in_grace_period": False},
             ],
         }
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/coverage/commit/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_coverage(request, "commit")
@@ -211,7 +206,7 @@ class TestApiCoverage:
     @patch("dashboard.analytics.views.db")
     def test_returns_404_for_unknown_skill(self, mock_db, mock_analytics, rf):
         mock_analytics.structure_coverage.side_effect = KeyError("nonexistent")
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/coverage/nonexistent/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z"})
         response = views.api_coverage(request, "nonexistent")
@@ -229,7 +224,7 @@ class TestApiCoverage:
     @patch("dashboard.analytics.views.db")
     def test_passes_file_grace_days(self, mock_db, mock_analytics, rf):
         mock_analytics.structure_coverage.return_value = {"skill_name": "x", "total_files": 0, "mature_files": 0, "accessed_files": 0, "depth_score": 0, "files": []}
-        mock_db.get_connection.return_value = mock_conn()
+        mock_db.get_connection.return_value = MagicMock()
 
         request = rf.get("/api/coverage/commit/", {"start": "2026-03-01T00:00:00Z", "end": "2026-03-31T23:59:59Z", "file_grace_days": "14"})
         response = views.api_coverage(request, "commit")
@@ -243,7 +238,7 @@ class TestApiSkills:
     @pytest.mark.unit
     @patch("dashboard.analytics.views.db")
     def test_returns_all_skills(self, mock_db, rf):
-        mock_conn_instance = mock_conn()
+        mock_conn_instance = MagicMock()
         mock_db.get_connection.return_value = mock_conn_instance
         mock_conn_instance.execute.return_value.fetchall.return_value = [
             ("commit", "folder", "user", "active", "2026-03-01", "2026-03-18", 3),
