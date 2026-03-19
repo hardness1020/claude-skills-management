@@ -1,3 +1,8 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """PreToolUse hook entry point.
 
 Reads JSON from stdin, logs skill invocations and nested file accesses,

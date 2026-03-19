@@ -6,9 +6,9 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-D97757?logo=anthropic&logoColor=white)](https://claude.ai/claude-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An open-source Claude Code plugin that tracks skill usage and analyzes whether your skills are actually useful.
+An open-source analytics tool that tracks Claude Code skill usage across your projects and tells you which skills are actually useful.
 
-Skills accumulate over time — from `.claude/skills/` folders and installed plugins — but there's no way to know which ones deliver value and which are dead weight. This plugin logs every skill invocation and nested file access, then provides a local dashboard with time-normalized analytics to answer: **which skills should I keep, improve, or remove?**
+You have your own project with skills accumulating over time — from `.claude/skills/` folders and installed plugins — but there's no way to know which ones deliver value and which are dead weight. Add this tool to your project, and it logs every skill invocation and nested file access via Claude Code hooks, then provides a local dashboard with time-normalized analytics to answer: **which skills should I keep, improve, or remove?**
 
 ## What it does
 
@@ -54,18 +54,30 @@ Deleted skills are preserved in the dashboard as "removed" with full historical 
 
 Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/).
 
-```bash
-# Clone the repo
-git clone https://github.com/your-username/agent-skills-management.git
-cd agent-skills-management
+### 1. Clone into your project
 
-# Install dependencies
+From your project's root directory:
+
+```bash
+git clone https://github.com/your-username/agent-skills-management.git
+```
+
+This creates an `agent-skills-management/` folder inside your project. You may want to add it to your `.gitignore`:
+
+```bash
+echo "agent-skills-management/" >> .gitignore
+```
+
+### 2. Install dependencies
+
+```bash
+cd agent-skills-management
 uv sync --dev
 ```
 
-### Configure Claude Code hooks
+### 3. Configure Claude Code hooks
 
-Add the following to your Claude Code settings (`.claude/settings.json` or `~/.claude/settings.json`):
+Add the following to your project's `.claude/settings.json` (or `~/.claude/settings.json` to track across all projects):
 
 ```json
 {
@@ -76,7 +88,7 @@ Add the following to your Claude Code settings (`.claude/settings.json` or `~/.c
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python /path/to/agent-skills-management/scripts/log_event.py",
+            "command": "$CLAUDE_PROJECT_DIR/agent-skills-management/scripts/log_event.py",
             "timeout": 10
           }
         ]
@@ -87,7 +99,7 @@ Add the following to your Claude Code settings (`.claude/settings.json` or `~/.c
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python /path/to/agent-skills-management/scripts/inventory_snapshot.py",
+            "command": "$CLAUDE_PROJECT_DIR/agent-skills-management/scripts/inventory_snapshot.py",
             "timeout": 10
           }
         ]
@@ -97,11 +109,16 @@ Add the following to your Claude Code settings (`.claude/settings.json` or `~/.c
 }
 ```
 
-Replace `/path/to/agent-skills-management` with the actual path.
+The hook scripts have a `#!/usr/bin/env -S uv run --script` shebang, so they execute directly — no wrapper needed. `$CLAUDE_PROJECT_DIR` is automatically set by Claude Code to your project root.
 
-### Launch the dashboard
+### 4. Restart Claude Code
+
+Start a new Claude Code session for the hooks to take effect. Every prompt you submit will now snapshot your skill inventory, and every skill invocation or file read will be logged.
+
+### 5. Launch the dashboard
 
 ```bash
+cd agent-skills-management
 uv run python -m django runserver 8787 --settings=dashboard.analytics_project.settings
 ```
 
@@ -161,14 +178,4 @@ All endpoints accept `start` and `end` query parameters (ISO 8601).
 | `GET /api/coverage/<skill>/` | Per-file access counts with time metrics |
 | `GET /api/skills/` | Full skill inventory with status |
 
-## Running tests
 
-```bash
-uv run python -m pytest tests/ -v
-```
-
-96 tests (84 unit + 12 integration), runs in < 0.5s.
-
-## License
-
-MIT
