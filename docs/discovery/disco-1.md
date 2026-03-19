@@ -4,6 +4,10 @@
 **File:** docs/discovery/disco-1.md
 **Last_updated:** 2026-03-18
 
+## Summary
+
+Greenfield project analyzed for building a Claude Code plugin that tracks skill usage analytics. Key findings: (1) PreToolUse hook with `Skill` and `Read` matchers captures invocations and nested file accesses; (2) UserPromptSubmit hook enables periodic skill inventory snapshots for add/remove detection; (3) `${CLAUDE_PLUGIN_DATA}` provides persistent SQLite storage; (4) Skills exist in 4 sources — `~/.claude/skills/`, `.claude/skills/`, plugin caches, and project-scoped plugins — all discoverable via filesystem scanning and `installed_plugins.json`. No blockers identified. **Recommendation: GO.**
+
 ## Phase 0: Spec Discovery
 
 This is a greenfield project — no existing specs or code beyond LICENSE and README. The PRD (`docs/prds/prd.md`) defines all requirements. Key specs needed:
