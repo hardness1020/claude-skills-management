@@ -5,7 +5,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key-change-in-production"
+def _get_secret_key():
+    """Generate and persist a Django SECRET_KEY on first run."""
+    plugin_data = os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        os.path.expanduser("~/.skills-analytics"),
+    )
+    secret_path = Path(plugin_data) / "django_secret.txt"
+    if secret_path.exists():
+        return secret_path.read_text().strip()
+    from django.core.management.utils import get_random_secret_key
+    key = get_random_secret_key()
+    Path(plugin_data).mkdir(parents=True, exist_ok=True)
+    secret_path.write_text(key)
+    return key
+
+
+SECRET_KEY = _get_secret_key()
 
 DEBUG = True
 
