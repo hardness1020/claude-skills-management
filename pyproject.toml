@@ -1,0 +1,24 @@
+[project]
+name = "skills-analytics"
+version = "0.1.0"
+description = "Claude Code skill usage analytics plugin"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "django>=4.2,<5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+DJANGO_SETTINGS_MODULE = "dashboard.analytics_project.settings"
+markers = [
+    "unit: Unit tests (fast, all dependencies mocked)",
+    "integration: Integration tests (uses test DB)",
+]
