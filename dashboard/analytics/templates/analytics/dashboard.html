@@ -34,8 +34,6 @@ input[type="text"]::placeholder{color:var(--t3)}
 .divider{width:1px;height:28px;background:var(--dark)}
 .btn-refresh{height:32px;background:var(--cyan);color:var(--bg);border:none;border-radius:6px;padding:0 16px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer}
 .btn-refresh:hover{opacity:0.9}
-.grace-tooltip{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--t3);color:var(--t2);font-family:var(--sans);font-size:11px;font-weight:600;cursor:help;margin-left:-8px}
-.grace-tooltip:hover{color:var(--cyan);border-color:var(--cyan)}
 
 /* Tab bar */
 .tab-bar{display:flex;align-items:center;height:44px;background:var(--dark);padding:0 24px;flex-shrink:0}
@@ -180,9 +178,10 @@ input[type="text"]::placeholder{color:var(--t3)}
       <input type="date" id="inp-start">
       <label>End</label>
       <input type="date" id="inp-end">
-      <label>Grace</label>
+      <span class="info-wrap"><label>Grace</label>
+        <span class="info-icon" data-tip="tip-grace"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+      </span>
       <input type="number" id="inp-grace" value="7" min="0" max="90">
-      <span class="grace-tooltip" title="Grace period (days): newly installed skills and files are excluded from usefulness scoring during this window, so they aren't penalized before accumulating enough usage data.">?</span>
       <div class="divider"></div>
       <button class="btn-refresh" onclick="refresh()">Refresh</button>
     </div>
@@ -312,6 +311,10 @@ input[type="text"]::placeholder{color:var(--t3)}
   <p>Measures decline in recent usage vs lifetime average. 0.0 = steady or growing, 1.0 = completely stopped. Values above 0.5 are flagged red.</p>
   <code>decay = 1 - (recent_14d_rate / lifetime_rate)</code>
 </div>
+<div class="tooltip" id="tip-grace">
+  <h4>Grace Period</h4>
+  <p>Number of days after a skill or file is first discovered before it's included in usefulness scoring. Newly installed skills show a "NEW" badge and are excluded from penalties during this window.</p>
+</div>
 
 <script>
 // --- Tooltip positioning ---
@@ -320,9 +323,18 @@ document.querySelectorAll('.info-icon[data-tip]').forEach(icon => {
   const tip = document.getElementById(tipId);
   icon.addEventListener('mouseenter', () => {
     const rect = icon.getBoundingClientRect();
-    tip.style.top = (rect.bottom + 8) + 'px';
-    tip.style.left = rect.left + 'px';
     tip.classList.add('visible');
+    const tipRect = tip.getBoundingClientRect();
+    let top = rect.bottom + 8;
+    let left = rect.left;
+    if (left + tipRect.width > window.innerWidth - 8) {
+      left = window.innerWidth - tipRect.width - 8;
+    }
+    if (top + tipRect.height > window.innerHeight - 8) {
+      top = rect.top - tipRect.height - 8;
+    }
+    tip.style.top = top + 'px';
+    tip.style.left = Math.max(8, left) + 'px';
   });
   icon.addEventListener('mouseleave', () => {
     tip.classList.remove('visible');

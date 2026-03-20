@@ -27,11 +27,12 @@ class TestDashboardView:
 
     @pytest.mark.unit
     def test_grace_input_has_tooltip_icon(self, rf):
-        """The Grace input should have a tooltip icon that explains the grace period."""
+        """The Grace input should have an info-icon tooltip matching SCORE/RATE/DECAY pattern."""
         request = rf.get("/")
         response = views.dashboard(request)
         html = response.content.decode()
-        assert 'class="grace-tooltip"' in html
+        assert 'data-tip="tip-grace"' in html
+        assert 'id="tip-grace"' in html
         assert "grace period" in html.lower()
 
 
