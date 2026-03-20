@@ -132,10 +132,10 @@ workitems:
     id: 9
     description: "Replace Grace tooltip with info-icon pattern matching SCORE/RATE/DECAY, with screen boundary clamping"
     track: micro
-    stage: F
+    stage: DONE
     branch: feat/fix-grace-tooltip-pattern
     started: 2026-03-19
-    checkpoint: 0
+    checkpoint: 4
     docs:
       prd: null
       discovery: null
