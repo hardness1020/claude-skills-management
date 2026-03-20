@@ -91,37 +91,38 @@ Hooks are short-lived Python scripts using only stdlib (`sqlite3`, `json`, `sys`
 
 All data stays local in `~/.skills-analytics/skills_analytics.db` (or `${CLAUDE_PLUGIN_DATA}/skills_analytics.db` when installed as a plugin). No telemetry, no remote calls. One shared database across all projects.
 
+## Known Issues
+
+- **User slash commands are not tracked.** The project records agent-initiated skill calls via `PreToolUse` on `Skill('skill-name')`, but user slash commands (`/skill-name`) bypass the tool hook pipeline entirely and are not captured.
+- **Subagent behavior is unverified.** It is unclear whether `PreToolUse` hooks fire for tool calls made by subagents (spawned via the Agent tool). File reads inside subagents may not be captured.
+- **Skill scripts invoked via Bash are not tracked.** When a skill's logic is triggered by a shell command (e.g., `uv run python scripts/...`) rather than the `Skill` tool, `PreToolUse` fires for `Bash` — not `Skill` — so the invocation is not attributed to the skill.
+
 ## Project structure
 
 ```
-.claude-plugin/
-    plugin.json                   # Plugin metadata for claude plugin install
-
-hooks/
-    hooks.json                    # Hook declarations (auto-registered on install)
-
-skills/
-    skills-analytics-dashboard/
-        SKILL.md                  # /skills-analytics-dashboard skill
-
-scripts/                          # Hook scripts (stdlib only, fast)
-    db.py                         # SQLite connection, schema, CRUD
-    skill_discovery.py            # Scan folder + plugin skill sources
-    log_event.py                  # PreToolUse hook entry point
-    inventory_snapshot.py         # UserPromptSubmit hook entry point
-
-dashboard/                        # Django dashboard (on-demand)
-    analytics/
-        analytics.py              # Usefulness scoring, trends, coverage
-        views.py                  # API endpoints + HTML dashboard
-        templates/analytics/
-            dashboard.html        # Single-page dashboard UI
-    analytics_project/
-        settings.py
-        urls.py
-
-tests/
-    hooks/                        # Tests for scripts/ and plugin config
-    dashboard/                    # Tests for dashboard/
+├── .claude-plugin/
+│   └── plugin.json                    # Plugin metadata for claude plugin install
+├── hooks/
+│   └── hooks.json                     # Hook declarations (auto-registered on install)
+├── skills/
+│   └── skills-analytics-dashboard/
+│       └── SKILL.md                   # /skills-analytics-dashboard skill
+├── scripts/                           # Hook scripts (stdlib only, fast)
+│   ├── db.py                          # SQLite connection, schema, CRUD
+│   ├── skill_discovery.py             # Scan folder + plugin skill sources
+│   ├── log_event.py                   # PreToolUse hook entry point
+│   └── inventory_snapshot.py          # UserPromptSubmit hook entry point
+├── dashboard/                         # Django dashboard (on-demand)
+│   ├── analytics/
+│   │   ├── analytics.py               # Usefulness scoring, trends, coverage
+│   │   ├── views.py                   # API endpoints + HTML dashboard
+│   │   └── templates/analytics/
+│   │       └── dashboard.html         # Single-page dashboard UI
+│   └── analytics_project/
+│       ├── settings.py
+│       └── urls.py
+└── tests/
+    ├── hooks/                         # Tests for scripts/ and plugin config
+    └── dashboard/                     # Tests for dashboard/
 ```
 
