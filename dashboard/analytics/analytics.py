@@ -286,6 +286,20 @@ def structure_coverage(
 
     depth_score = accessed_mature / mature_count if mature_count > 0 else 0.0
 
+    # Sort files in VS Code explorer order: at each directory level,
+    # subdirectories appear before files, both sorted alphabetically (case-insensitive).
+    def _vscode_sort_key(entry: dict) -> tuple:
+        parts = entry["relative_path"].split("/")
+        # Build a key where each segment is prefixed with 0 (directory) or 1 (file).
+        # The last segment is always a file; all preceding segments are directories.
+        key = []
+        for i, part in enumerate(parts):
+            is_file = i == len(parts) - 1
+            key.append((1 if is_file else 0, part.lower()))
+        return key
+
+    file_results.sort(key=_vscode_sort_key)
+
     return {
         "skill_name": skill_name,
         "total_files": total_count,

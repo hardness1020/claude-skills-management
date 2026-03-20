@@ -359,6 +359,68 @@ class TestStructureCoverage:
         assert result["depth_score"] == pytest.approx(1.0)
 
     @pytest.mark.unit
+    def test_files_ordered_like_vscode_explorer(self, conn):
+        """Files should be returned in VS Code explorer order:
+        directories first (alphabetical), then root files (alphabetical),
+        case-insensitive. This matches user expectations from their IDE.
+        """
+        seed_skills(conn)
+        skill_id = conn.execute("SELECT id FROM skills WHERE name = 'popular'").fetchone()[0]
+
+        # Insert files in random order — the API must return them sorted
+        db.upsert_skill_file(conn, skill_id, "SKILL.md", "markdown", "content", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "scripts/run.py", "script", "script", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "README.md", "markdown", "content", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "assets/logo.png", "asset", "content", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "references/api.md", "reference", "content", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "references/guide.md", "reference", "content", "2026-03-01T00:00:00Z")
+
+        # Give some files accesses so access_count doesn't accidentally sort correctly
+        seed_file_accesses(conn, "popular", ["SKILL.md"], count_each=10)
+        seed_file_accesses(conn, "popular", ["scripts/run.py"], count_each=5)
+
+        result = analytics.structure_coverage(
+            conn, "popular", "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z"
+        )
+        paths = [f["relative_path"] for f in result["files"]]
+
+        # Expected: dirs first (assets/, references/, scripts/), then root files
+        assert paths == [
+            "assets/logo.png",
+            "references/api.md",
+            "references/guide.md",
+            "scripts/run.py",
+            "README.md",
+            "SKILL.md",
+        ]
+
+    @pytest.mark.unit
+    def test_files_ordered_nested_dirs_before_files_at_each_level(self, conn):
+        """Within a directory, subdirectories should appear before files,
+        matching VS Code explorer behavior at every nesting level.
+        """
+        seed_skills(conn)
+        skill_id = conn.execute("SELECT id FROM skills WHERE name = 'popular'").fetchone()[0]
+
+        db.upsert_skill_file(conn, skill_id, "src/utils/helper.py", "script", "script", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "src/main.py", "script", "script", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "src/utils/sub/deep.py", "script", "script", "2026-03-01T00:00:00Z")
+        db.upsert_skill_file(conn, skill_id, "config.yaml", "config", "content", "2026-03-01T00:00:00Z")
+
+        result = analytics.structure_coverage(
+            conn, "popular", "2026-03-01T00:00:00Z", "2026-03-31T23:59:59Z"
+        )
+        paths = [f["relative_path"] for f in result["files"]]
+
+        # src/ dir first, within src/: utils/ dir before main.py, within utils/: sub/ dir before helper.py
+        assert paths == [
+            "src/utils/sub/deep.py",
+            "src/utils/helper.py",
+            "src/main.py",
+            "config.yaml",
+        ]
+
+    @pytest.mark.unit
     def test_skill_not_found_raises(self, conn):
         with pytest.raises(KeyError):
             analytics.structure_coverage(

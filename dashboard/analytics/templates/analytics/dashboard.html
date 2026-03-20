@@ -479,8 +479,7 @@ async function loadCoverage(name) {
       return;
     }
 
-    // Sort: accessed first, then by access_count desc
-    data.files.sort((a, b) => b.access_count - a.access_count);
+    // Files arrive pre-sorted in VS Code explorer order from the API
 
     data.files.forEach(f => {
       const isDormant = f.access_count === 0;
