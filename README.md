@@ -6,9 +6,13 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-D97757?logo=anthropic&logoColor=white)](https://claude.ai/claude-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An open-source analytics plugin for Claude Code that tracks skill usage across all your projects and tells you which skills are actually useful.
+**Stop guessing which skills matter.** This Claude Code plugin tracks every skill invocation across all your projects and scores each one. You know what to keep, improve, or remove.
 
-You have skills accumulating over time — from `.claude/skills/` folders and installed plugins — but there's no way to know which ones deliver value and which are dead weight. Install this plugin once, and it logs every skill invocation and nested file access via Claude Code hooks across every project, then provides a local dashboard with time-normalized analytics to answer: **which skills should I keep, improve, or remove?**
+## Demo
+
+https://github.com/user-attachments/assets/0eeb34f8-f564-4022-a1c3-d1062d5825f9
+
+You have skills accumulating over time but there's no way to know which ones deliver value and which are dead weight. Install this plugin once, and it logs every skill invocation and nested file access via Claude Code hooks across every project, then provides a local dashboard with time-normalized analytics to answer: **which skills should I keep, improve, or remove?**
 
 ## What it does
 
